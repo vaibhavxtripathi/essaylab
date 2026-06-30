@@ -16,6 +16,7 @@ export type SubmitEssayResult =
 export async function submitEssay(args: {
 	sessionId: string;
 	essayText: string;
+	classId?: string;
 }): Promise<SubmitEssayResult> {
 	const validation = validateEssayText(args.essayText);
 	if (!validation.ok) {
@@ -31,7 +32,8 @@ export async function submitEssay(args: {
 			essay_text: args.essayText,
 			overall_feedback: null,
 			status: 'pending',
-			error_message: null
+			error_message: null,
+			class_id: args.classId ?? null
 		})
 		.select()
 		.single();
@@ -103,4 +105,47 @@ function toUserFacingErrorMessage(err: unknown): string {
 	}
 	console.error('Unexpected pipeline error:', err);
 	return 'Something went wrong while grading your essay. Please try again.';
+}
+
+export type SubmitClassBatchResult =
+	| { ok: true; classId: string; submissionResults: SubmitEssayResult[] }
+	| { ok: false; errorMessage: string };
+
+/**
+ * Creates a class batch and runs the per-essay pipeline (Stage 1 + 2) for every essay
+ * in parallel via Promise.all. Each essay's pipeline failure/success is independent —
+ * one essay failing does not block or fail the others, matching the per-submission
+ * failure model already used for single-essay grading.
+ */
+export async function submitClassBatch(args: {
+	sessionId: string;
+	essays: string[];
+	className?: string;
+}): Promise<SubmitClassBatchResult> {
+	if (args.essays.length < 2) {
+		return { ok: false, errorMessage: 'Please provide at least 2 essays for class mode.' };
+	}
+	if (args.essays.length > 10) {
+		return { ok: false, errorMessage: 'Class mode supports up to 10 essays at a time.' };
+	}
+
+	const supabase = createSupabaseServerClient();
+
+	const { data: classRow, error: classError } = await supabase
+		.from('classes')
+		.insert({ session_id: args.sessionId, name: args.className ?? null })
+		.select()
+		.single();
+
+	if (classError || !classRow) {
+		return { ok: false, errorMessage: 'Could not create the class batch. Please try again.' };
+	}
+
+	const submissionResults = await Promise.all(
+		args.essays.map((essayText) =>
+			submitEssay({ sessionId: args.sessionId, essayText, classId: classRow.id })
+		)
+	);
+
+	return { ok: true, classId: classRow.id, submissionResults };
 }

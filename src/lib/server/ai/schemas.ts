@@ -65,3 +65,11 @@ export const Stage3ResultSchema = z.object({
 });
 
 export type Stage3Result = z.infer<typeof Stage3ResultSchema>;
+
+// --- Stage 4: answer a free-text question over aggregated class data ---
+
+export const ClassQueryResultSchema = z.object({
+	answer: z.string().min(1)
+});
+
+export type ClassQueryResult = z.infer<typeof ClassQueryResultSchema>;

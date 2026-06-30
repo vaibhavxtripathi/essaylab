@@ -44,6 +44,14 @@ export type Submission = {
 	status: SubmissionStatus;
 	error_message: string | null;
 	created_at: string;
+	class_id: string | null;
+};
+
+export type Class = {
+	id: string;
+	session_id: string;
+	name: string | null;
+	created_at: string;
 };
 
 export type Mistake = {
@@ -82,8 +90,18 @@ export type Database = {
 		Tables: {
 			submissions: {
 				Row: Submission;
-				Insert: Omit<Submission, 'id' | 'created_at'> & { id?: string; created_at?: string };
+				Insert: Omit<Submission, 'id' | 'created_at' | 'class_id'> & {
+					id?: string;
+					created_at?: string;
+					class_id?: string | null;
+				};
 				Update: Partial<Submission>;
+				Relationships: [];
+			};
+			classes: {
+				Row: Class;
+				Insert: Omit<Class, 'id' | 'created_at'> & { id?: string; created_at?: string };
+				Update: Partial<Class>;
 				Relationships: [];
 			};
 			mistakes: {

@@ -25,10 +25,12 @@ function getModel(): string {
 	return env.GROQ_MODEL ?? 'llama-3.3-70b-versatile';
 }
 
+export type PipelineStage = 'stage1' | 'stage2' | 'stage3' | 'stage4';
+
 export class PipelineStageError extends Error {
 	constructor(
 		message: string,
-		public readonly stage: 'stage1' | 'stage2' | 'stage3',
+		public readonly stage: PipelineStage,
 		public readonly cause?: unknown
 	) {
 		super(message);
@@ -43,7 +45,7 @@ export class PipelineStageError extends Error {
  * uniformly instead of crashing the request.
  */
 export async function callGroqForJson<Schema extends z.ZodTypeAny>(args: {
-	stage: 'stage1' | 'stage2' | 'stage3';
+	stage: PipelineStage;
 	systemPrompt: string;
 	userPrompt: string;
 	schema: Schema;

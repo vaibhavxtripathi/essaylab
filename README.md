@@ -1,24 +1,61 @@
-# Essay Mistake → Practice Question Generator
+# essaylab
 
-A small full-stack tool: a student pastes an essay, an AI pipeline grades it and extracts specific mistakes (grammar/mechanics + structure/argument), and the tool generates personalized practice questions targeting those mistakes.
+**Live:** https://essaylab-grd.vercel.app  
+Student pastes essay → AI flags mistakes with exact quotes → generates personalized practice questions from those mistakes. No numeric grade, ever.
 
-See [SPEC.md](./SPEC.md) for the full technical spec — data model, AI pipeline stages, UI pages, and edge case handling.
+Built while applying to [Gradr](https://gradr.se) — several decisions here mirror their public engineering stance.
 
-## Why this project
-
-Built as a portfolio piece while applying for an engineering role at [Gradr](https://gradr.se), a Swedish startup building AI-assisted formative feedback tools for teachers. A few decisions here intentionally mirror choices I understand Gradr to have made in their own product and engineering practice:
-
-- **Feedback, not grading.** The pipeline never produces a numeric grade — only qualitative feedback and flagged mistakes. Final grading stays a human decision. This matches Gradr's own stance on keeping grading human-only, partly for EU AI Act reasons around automated decisions affecting students (*myndighetsutövning*).
-- **Strict typing and validated structured output.** Every Groq response is parsed through a Zod schema before use; no `any`, no unchecked casts. This reflects an engineering culture that prioritizes static analysis and reliable structured LLM output over loose prompting.
-- **Multi-stage pipeline, not one big prompt.** Grading, mistake extraction, and question generation are separate calls with narrow jobs, rather than one prompt trying to do everything at once.
-- **Closing a workflow gap.** The practice-question flow connects directly to the mistakes found during grading — addressing the kind of disconnect that can exist between a "graded feedback" feature and a separate, unconnected "practice" feature.
-
-The app itself has no Gradr branding and is a standalone tool — this section just explains the reasoning behind a few design choices, in case it's useful context for anyone reviewing the code.
+---
 
 ## Stack
+SvelteKit · TypeScript · PostgreSQL (Supabase) · Groq
 
-SvelteKit (frontend + backend), PostgreSQL via Supabase, Groq API for LLM calls.
+---
 
-## Status
+## Pipeline
 
-Spec complete, implementation not yet started.
+```
+essay text
+  → [Stage 1] grade + extract mistakes  (1 Groq call)
+  → [Stage 2] group by category + generate questions  (1 batched Groq call)
+  → persist in one DB transaction
+  → results page → practice page
+  → [Stage 3] grade short-response answers on demand  (1 Groq call per answer)
+```
+
+Grammar categories → MCQ. Structure/argument categories → short written response. This routing is deterministic in application code — the model never decides it.
+
+---
+
+## Architecture Design
+
+![Architecture](./src/asset/architecture.png)
+
+---
+
+## Decisions worth explaining
+
+**One call per stage, not one big prompt.** A single prompt doing everything produces unreliable structured output. Splitting gives each call a narrow schema, isolated failures, and easier prompt tuning.
+
+**Zod at every AI boundary.** Groq's `json_object` mode is not schema-validated. Every response is `unknown` until it passes `.safeParse()`. Types are inferred from schemas with `z.infer<>` — no hand-written parallel types that can drift.
+
+**Fixed 8-category enum.** Categories live as a Postgres check constraint, a TS literal union, and an explicit prompt instruction simultaneously. Makes aggregation trivial and rules out schema drift. Tradeoff: a real mistake outside the 8 goes unflagged.
+
+**Questions grouped by category, not per mistake instance.** Three comma splices → 1-2 representative questions, not 3 identical ones. Grouping is pure app logic before Stage 2.
+
+**Feedback not a grade.** Mirrors Gradr's own stance — final grading is a human decision both pedagogically and (in some jurisdictions) legally.
+
+---
+
+## Problems hit
+
+- `llama-3.3-70b-versatile` doesn't support `json_schema` mode, only `json_object` — so Zod is the actual validation gate, not the API
+- Supabase typed client silently degrades to `never` with `interface` row types — fixed by switching to `type` aliases
+- Stage 1 occasionally returns hallucinated category names — dropped server-side before DB insert, never crash the pipeline
+- Model sometimes paraphrases instead of exact-quoting — logged, not fatal
+- Svelte 5 `$effect` re-ran on every reactive change and overwrote answer state mid-typing — fixed with `untrack()` on the DB fetch
+
+---
+
+## Not here (deliberately)
+File upload · Auth · Rate limiting · Numeric grades 

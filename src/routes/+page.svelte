@@ -135,6 +135,13 @@
 			<span>Personalized practice</span>
 		</div>
 	</div>
+
+	<a href="/class" class="class-mode-link">
+		<span class="class-mode-text">
+			<strong>Grading for a class?</strong> Batch-submit essays and get a class-wide analytics dashboard.
+		</span>
+		<span class="class-mode-arrow" aria-hidden="true">→</span>
+	</a>
 </main>
 
 <style>
@@ -406,6 +413,49 @@
 	.feature-icon {
 		color: var(--accent-500);
 		font-size: 0.65rem;
+	}
+
+	/* ─── Class mode link ─── */
+
+	.class-mode-link {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		text-decoration: none;
+		background: var(--paper-50);
+		border: 1px dashed var(--paper-400);
+		border-radius: var(--radius-md);
+		padding: 0.9rem 1.2rem;
+		margin-top: 0.5rem;
+		transition: border-color 0.16s ease, background-color 0.16s ease;
+	}
+
+	.class-mode-link:hover {
+		border-color: var(--accent-500);
+		border-style: solid;
+		background: var(--accent-100);
+	}
+
+	.class-mode-text {
+		font-size: 0.88rem;
+		color: var(--ink-600);
+		line-height: 1.45;
+	}
+
+	.class-mode-text strong {
+		color: var(--ink-800);
+	}
+
+	.class-mode-arrow {
+		flex-shrink: 0;
+		color: var(--accent-600);
+		font-size: 1rem;
+		transition: transform 0.16s ease;
+	}
+
+	.class-mode-link:hover .class-mode-arrow {
+		transform: translateX(3px);
 	}
 
 	/* ─── Responsive ─── */
