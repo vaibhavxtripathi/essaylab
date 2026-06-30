@@ -1,7 +1,7 @@
 # essaylab
 
 **Live:** https://essaylab-grd.vercel.app  
-Student pastes essay → AI flags mistakes with exact quotes → generates personalized practice questions from those mistakes. No numeric grade, ever.
+Student pastes essay → AI flags mistakes with exact quotes → generates personalized practice questions from those mistakes.
 
 Built while applying to [Gradr](https://gradr.se) — several decisions here mirror their public engineering stance.
 
